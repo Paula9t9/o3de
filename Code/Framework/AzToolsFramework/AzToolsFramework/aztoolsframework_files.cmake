@@ -47,6 +47,7 @@ set(FILES
     API/EntityCompositionRequestBus.h
     API/EntityCompositionNotificationBus.h
     API/EditorViewportIconDisplayInterface.h
+    API/PythonLoader.h
     API/ViewPaneOptions.h
     API/ViewportEditorModeTrackerInterface.h
     Application/Ticker.h
@@ -759,6 +760,9 @@ set(FILES
     UI/Prefab/PrefabUiHandler.cpp
     UI/Prefab/PrefabViewportFocusPathHandler.h
     UI/Prefab/PrefabViewportFocusPathHandler.cpp
+    UI/Notifications/ToastNotificationsView.cpp
+    UI/Notifications/ToastNotificationsView.h
+    UI/Notifications/ToastBus.h
     PythonTerminal/ScriptHelpDialog.cpp
     PythonTerminal/ScriptHelpDialog.h
     PythonTerminal/ScriptHelpDialog.ui
@@ -767,6 +771,9 @@ set(FILES
     PythonTerminal/ScriptTermDialog.ui
     Input/QtEventToAzInputManager.h
     Input/QtEventToAzInputManager.cpp
+    Script/LuaSymbolsReporterBus.h
+    Script/LuaSymbolsReporterSystemComponent.h
+    Script/LuaSymbolsReporterSystemComponent.cpp
 )
 
 # Prevent the following files from being grouped in UNITY builds

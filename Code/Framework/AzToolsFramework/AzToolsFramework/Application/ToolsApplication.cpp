@@ -70,6 +70,7 @@
 #include <AzToolsFramework/Undo/UndoCacheInterface.h>
 #include <AzToolsFramework/Prefab/PrefabPublicInterface.h>
 #include <Entity/EntityUtilityComponent.h>
+#include <AzToolsFramework/Script/LuaSymbolsReporterSystemComponent.h>
 
 #include <QtWidgets/QMessageBox>
 AZ_PUSH_DISABLE_WARNING(4251, "-Wunknown-warning-option") // 4251: 'QFileInfo::d_ptr': class 'QSharedDataPointer<QFileInfoPrivate>' needs to have dll-interface to be used by clients of class 'QFileInfo'
@@ -175,7 +176,7 @@ namespace AzToolsFramework
             , public AZ::BehaviorEBusHandler
         {
             AZ_EBUS_BEHAVIOR_BINDER(ToolsApplicationNotificationBusHandler, "{7EB67956-FF86-461A-91E2-7B08279CFACF}", AZ::SystemAllocator,
-                EntityRegistered, EntityDeregistered);
+                EntityRegistered, EntityDeregistered, AfterEntitySelectionChanged);
 
             void EntityRegistered(AZ::EntityId entityId) override
             {
@@ -185,6 +186,11 @@ namespace AzToolsFramework
             void EntityDeregistered(AZ::EntityId entityId) override
             {
                 Call(FN_EntityDeregistered, entityId);
+            }
+
+            void AfterEntitySelectionChanged(const EntityIdList& newlySelectedEntities, const EntityIdList& newlyDeselectedEntities) override
+            {
+                Call(FN_AfterEntitySelectionChanged, newlySelectedEntities, newlyDeselectedEntities);
             }
         };
 
@@ -209,11 +215,16 @@ namespace AzToolsFramework
             , public AZ::BehaviorEBusHandler
         {
             AZ_EBUS_BEHAVIOR_BINDER(EditorEventsBusHandler, "{352F80BB-469A-40B6-B322-FE57AB51E4DA}", AZ::SystemAllocator,
-                NotifyRegisterViews);
+                NotifyRegisterViews, NotifyEditorInitialized);
 
             void NotifyRegisterViews() override
             {
                 Call(FN_NotifyRegisterViews);
+            }
+
+            void NotifyEditorInitialized() override
+            {
+                Call(FN_NotifyEditorInitialized);
             }
         };
 
@@ -273,7 +284,8 @@ namespace AzToolsFramework
                 azrtti_typeid<Components::EditorEntitySearchComponent>(),
                 azrtti_typeid<Components::EditorIntersectorComponent>(),
                 azrtti_typeid<AzToolsFramework::SliceRequestComponent>(),
-                azrtti_typeid<AzToolsFramework::EntityUtilityComponent>()
+                azrtti_typeid<AzToolsFramework::EntityUtilityComponent>(),
+                azrtti_typeid<AzToolsFramework::Script::LuaSymbolsReporterSystemComponent>(),
             });
 
         return components;
@@ -408,6 +420,7 @@ namespace AzToolsFramework
                 ->Handler<Internal::ToolsApplicationNotificationBusHandler>()
                 ->Event("EntityRegistered", &ToolsApplicationEvents::EntityRegistered)
                 ->Event("EntityDeregistered", &ToolsApplicationEvents::EntityDeregistered)
+                ->Event("AfterEntitySelectionChanged", &ToolsApplicationEvents::AfterEntitySelectionChanged)
                 ;
 
             behaviorContext->Class<ViewPaneOptions>()
@@ -418,6 +431,8 @@ namespace AzToolsFramework
                 ->Property("showInMenu", BehaviorValueProperty(&ViewPaneOptions::showInMenu))
                 ->Property("canHaveMultipleInstances", BehaviorValueProperty(&ViewPaneOptions::canHaveMultipleInstances))
                 ->Property("isPreview", BehaviorValueProperty(&ViewPaneOptions::isPreview))
+                ->Property("showOnToolsToolbar", BehaviorValueProperty(&ViewPaneOptions::showOnToolsToolbar))
+                ->Property("toolbarIcon", BehaviorValueProperty(&ViewPaneOptions::toolbarIcon))
                 ;
 
             behaviorContext->EBus<EditorRequestBus>("EditorRequestBus")
@@ -426,6 +441,7 @@ namespace AzToolsFramework
                 ->Attribute(AZ::Script::Attributes::Module, "editor")
                 ->Event("RegisterCustomViewPane", &EditorRequests::RegisterCustomViewPane)
                 ->Event("UnregisterViewPane", &EditorRequests::UnregisterViewPane)
+                ->Event("GetComponentTypeEditorIcon", &EditorRequests::GetComponentTypeEditorIcon)
                 ;
 
             behaviorContext->EBus<EditorEventsBus>("EditorEventBus")
@@ -434,6 +450,7 @@ namespace AzToolsFramework
                 ->Attribute(AZ::Script::Attributes::Module, "editor")
                 ->Handler<Internal::EditorEventsBusHandler>()
                 ->Event("NotifyRegisterViews", &EditorEvents::NotifyRegisterViews)
+                ->Event("NotifyEditorInitialized", &EditorEvents::NotifyEditorInitialized)
                 ;
 
             behaviorContext->EBus<ViewPaneCallbackBus>("ViewPaneCallbackBus")
@@ -1181,14 +1198,25 @@ namespace AzToolsFramework
 
     AZ::EntityId ToolsApplication::GetCurrentLevelEntityId()
     {
-        AzFramework::EntityContextId editorEntityContextId = AzFramework::EntityContextId::CreateNull();
-        AzToolsFramework::EditorEntityContextRequestBus::BroadcastResult(editorEntityContextId, &AzToolsFramework::EditorEntityContextRequestBus::Events::GetEditorEntityContextId);
-        AZ::SliceComponent* rootSliceComponent = nullptr;
-        AzFramework::SliceEntityOwnershipServiceRequestBus::EventResult(rootSliceComponent, editorEntityContextId,
-            &AzFramework::SliceEntityOwnershipServiceRequestBus::Events::GetRootSlice);
-        if (rootSliceComponent && rootSliceComponent->GetMetadataEntity())
+        if (IsPrefabSystemEnabled())
         {
-            return rootSliceComponent->GetMetadataEntity()->GetId();
+            if (auto prefabPublicInterface = AZ::Interface<Prefab::PrefabPublicInterface>::Get())
+            {
+                return prefabPublicInterface->GetLevelInstanceContainerEntityId();
+            }
+        }
+        else
+        {
+            AzFramework::EntityContextId editorEntityContextId = AzFramework::EntityContextId::CreateNull();
+            AzToolsFramework::EditorEntityContextRequestBus::BroadcastResult(
+                editorEntityContextId, &AzToolsFramework::EditorEntityContextRequestBus::Events::GetEditorEntityContextId);
+            AZ::SliceComponent* rootSliceComponent = nullptr;
+            AzFramework::SliceEntityOwnershipServiceRequestBus::EventResult(
+                rootSliceComponent, editorEntityContextId, &AzFramework::SliceEntityOwnershipServiceRequestBus::Events::GetRootSlice);
+            if (rootSliceComponent && rootSliceComponent->GetMetadataEntity())
+            {
+                return rootSliceComponent->GetMetadataEntity()->GetId();
+            }
         }
 
         return AZ::EntityId();

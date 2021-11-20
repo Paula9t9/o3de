@@ -41,6 +41,11 @@ def get_o3de_folder() -> pathlib.Path:
     o3de_folder.mkdir(parents=True, exist_ok=True)
     return o3de_folder
 
+def get_o3de_user_folder() -> pathlib.Path:
+    o3de_user_folder = get_home_folder() / 'O3DE'
+    o3de_user_folder.mkdir(parents=True, exist_ok=True)
+    return o3de_user_folder
+
 
 def get_o3de_registry_folder() -> pathlib.Path:
     registry_folder = get_o3de_folder() / 'Registry'
@@ -67,19 +72,19 @@ def get_o3de_engines_folder() -> pathlib.Path:
 
 
 def get_o3de_projects_folder() -> pathlib.Path:
-    projects_folder = get_o3de_folder() / 'Projects'
+    projects_folder = get_o3de_user_folder() / 'Projects'
     projects_folder.mkdir(parents=True, exist_ok=True)
     return projects_folder
 
 
 def get_o3de_gems_folder() -> pathlib.Path:
-    gems_folder = get_o3de_folder() / 'Gems'
+    gems_folder = get_o3de_user_folder() / 'Gems'
     gems_folder.mkdir(parents=True, exist_ok=True)
     return gems_folder
 
 
 def get_o3de_templates_folder() -> pathlib.Path:
-    templates_folder = get_o3de_folder() / 'Templates'
+    templates_folder = get_o3de_user_folder() / 'Templates'
     templates_folder.mkdir(parents=True, exist_ok=True)
     return templates_folder
 
@@ -103,75 +108,79 @@ def get_o3de_third_party_folder() -> pathlib.Path:
 
 
 # o3de manifest file methods
+def get_default_o3de_manifest_json_data() -> dict:
+    """
+    Returns dict with default values suitable for storing
+    in the o3de_manifests.json
+    """
+    username = os.path.split(get_home_folder())[-1]
+
+    o3de_folder = get_o3de_folder()
+    default_engines_folder = get_o3de_engines_folder()
+    default_projects_folder = get_o3de_projects_folder()
+    default_gems_folder = get_o3de_gems_folder()
+    default_templates_folder = get_o3de_templates_folder()
+    default_restricted_folder = get_o3de_restricted_folder()
+    default_third_party_folder = get_o3de_third_party_folder()
+
+    default_projects_restricted_folder = default_projects_folder / 'Restricted'
+    default_projects_restricted_folder.mkdir(parents=True, exist_ok=True)
+    default_gems_restricted_folder = default_gems_folder / 'Restricted'
+    default_gems_restricted_folder.mkdir(parents=True, exist_ok=True)
+    default_templates_restricted_folder = default_templates_folder / 'Restricted'
+    default_templates_restricted_folder.mkdir(parents=True, exist_ok=True)
+
+    json_data = {}
+    json_data.update({'o3de_manifest_name': f'{username}'})
+    json_data.update({'origin': o3de_folder.as_posix()})
+    json_data.update({'default_engines_folder': default_engines_folder.as_posix()})
+    json_data.update({'default_projects_folder': default_projects_folder.as_posix()})
+    json_data.update({'default_gems_folder': default_gems_folder.as_posix()})
+    json_data.update({'default_templates_folder': default_templates_folder.as_posix()})
+    json_data.update({'default_restricted_folder': default_restricted_folder.as_posix()})
+    json_data.update({'default_third_party_folder': default_third_party_folder.as_posix()})
+
+    json_data.update({'engines': []})
+    json_data.update({'projects': []})
+    json_data.update({'external_subdirectories': []})
+    json_data.update({'templates': []})
+    json_data.update({'restricted': []})
+    json_data.update({'repos': []})
+
+    default_restricted_folder_json = default_restricted_folder / 'restricted.json'
+    if not default_restricted_folder_json.is_file():
+        with default_restricted_folder_json.open('w') as s:
+            restricted_json_data = {}
+            restricted_json_data.update({'restricted_name': 'o3de'})
+            s.write(json.dumps(restricted_json_data, indent=4) + '\n')
+
+    default_projects_restricted_folder_json = default_projects_restricted_folder / 'restricted.json'
+    if not default_projects_restricted_folder_json.is_file():
+        with default_projects_restricted_folder_json.open('w') as s:
+            restricted_json_data = {}
+            restricted_json_data.update({'restricted_name': 'projects'})
+            s.write(json.dumps(restricted_json_data, indent=4) + '\n')
+
+    default_gems_restricted_folder_json = default_gems_restricted_folder / 'restricted.json'
+    if not default_gems_restricted_folder_json.is_file():
+        with default_gems_restricted_folder_json.open('w') as s:
+            restricted_json_data = {}
+            restricted_json_data.update({'restricted_name': 'gems'})
+            s.write(json.dumps(restricted_json_data, indent=4) + '\n')
+
+    default_templates_restricted_folder_json = default_templates_restricted_folder / 'restricted.json'
+    if not default_templates_restricted_folder_json.is_file():
+        with default_templates_restricted_folder_json.open('w') as s:
+            restricted_json_data = {}
+            restricted_json_data.update({'restricted_name': 'templates'})
+            s.write(json.dumps(restricted_json_data, indent=4) + '\n')
+
+    return json_data
+
 def get_o3de_manifest() -> pathlib.Path:
     manifest_path = get_o3de_folder() / 'o3de_manifest.json'
     if not manifest_path.is_file():
-        username = os.path.split(get_home_folder())[-1]
-
-        o3de_folder = get_o3de_folder()
-        default_registry_folder = get_o3de_registry_folder()
-        default_cache_folder = get_o3de_cache_folder()
-        default_downloads_folder = get_o3de_download_folder()
-        default_logs_folder = get_o3de_logs_folder()
-        default_engines_folder = get_o3de_engines_folder()
-        default_projects_folder = get_o3de_projects_folder()
-        default_gems_folder = get_o3de_gems_folder()
-        default_templates_folder = get_o3de_templates_folder()
-        default_restricted_folder = get_o3de_restricted_folder()
-        default_third_party_folder = get_o3de_third_party_folder()
-
-        default_projects_restricted_folder = default_projects_folder / 'Restricted'
-        default_projects_restricted_folder.mkdir(parents=True, exist_ok=True)
-        default_gems_restricted_folder = default_gems_folder / 'Restricted'
-        default_gems_restricted_folder.mkdir(parents=True, exist_ok=True)
-        default_templates_restricted_folder = default_templates_folder / 'Restricted'
-        default_templates_restricted_folder.mkdir(parents=True, exist_ok=True)
-
-        json_data = {}
-        json_data.update({'o3de_manifest_name': f'{username}'})
-        json_data.update({'origin': o3de_folder.as_posix()})
-        json_data.update({'default_engines_folder': default_engines_folder.as_posix()})
-        json_data.update({'default_projects_folder': default_projects_folder.as_posix()})
-        json_data.update({'default_gems_folder': default_gems_folder.as_posix()})
-        json_data.update({'default_templates_folder': default_templates_folder.as_posix()})
-        json_data.update({'default_restricted_folder': default_restricted_folder.as_posix()})
-        json_data.update({'default_third_party_folder': default_third_party_folder.as_posix()})
-
-        json_data.update({'engines': []})
-        json_data.update({'projects': []})
-        json_data.update({'external_subdirectories': []})
-        json_data.update({'templates': []})
-        json_data.update({'restricted': []})
-        json_data.update({'repos': []})
-
-        default_restricted_folder_json = default_restricted_folder / 'restricted.json'
-        if not default_restricted_folder_json.is_file():
-            with default_restricted_folder_json.open('w') as s:
-                restricted_json_data = {}
-                restricted_json_data.update({'restricted_name': 'o3de'})
-                s.write(json.dumps(restricted_json_data, indent=4) + '\n')
-        json_data.update({'default_restricted_folder': default_restricted_folder.as_posix()})
-
-        default_projects_restricted_folder_json = default_projects_restricted_folder / 'restricted.json'
-        if not default_projects_restricted_folder_json.is_file():
-            with default_projects_restricted_folder_json.open('w') as s:
-                restricted_json_data = {}
-                restricted_json_data.update({'restricted_name': 'projects'})
-                s.write(json.dumps(restricted_json_data, indent=4) + '\n')
-
-        default_gems_restricted_folder_json = default_gems_restricted_folder / 'restricted.json'
-        if not default_gems_restricted_folder_json.is_file():
-            with default_gems_restricted_folder_json.open('w') as s:
-                restricted_json_data = {}
-                restricted_json_data.update({'restricted_name': 'gems'})
-                s.write(json.dumps(restricted_json_data, indent=4) + '\n')
-
-        default_templates_restricted_folder_json = default_templates_restricted_folder / 'restricted.json'
-        if not default_templates_restricted_folder_json.is_file():
-            with default_templates_restricted_folder_json.open('w') as s:
-                restricted_json_data = {}
-                restricted_json_data.update({'restricted_name': 'templates'})
-                s.write(json.dumps(restricted_json_data, indent=4) + '\n')
+        json_data = get_default_o3de_manifest_json_data()
 
         with manifest_path.open('w') as s:
             s.write(json.dumps(json_data, indent=4) + '\n')
@@ -183,6 +192,7 @@ def load_o3de_manifest(manifest_path: pathlib.Path = None) -> dict:
     """
     Loads supplied manifest file or ~/.o3de/o3de_manifest.json if None
 
+    raises Json.JSONDecodeError if manifest data could not be decoded to JSON
     :param manifest_path: optional path to manifest file to load
     """
     if not manifest_path:
@@ -191,8 +201,10 @@ def load_o3de_manifest(manifest_path: pathlib.Path = None) -> dict:
         try:
             json_data = json.load(f)
         except json.JSONDecodeError as e:
-            logger.error(f'Manifest json failed to load: {str(e)}')
-            return {}
+            logger.error(f'Manifest json failed to load at path "{manifest_path}": {str(e)}')
+            # Re-raise the exception and let the caller
+            # determine if they can proceed
+            raise
         else:
             return json_data
 
@@ -450,7 +462,7 @@ def get_json_data_file(object_json: pathlib.Path,
         try:
             object_json_data = json.load(f)
         except json.JSONDecodeError as e:
-            logger.warn(f'{object_json} failed to load: {e}')
+            logger.warning(f'{object_json} failed to load: {e}')
         else:
             return object_json_data
 
@@ -497,7 +509,10 @@ def get_gem_json_data(gem_name: str = None, gem_path: str or pathlib.Path = None
     if gem_name and not gem_path:
         gem_path = get_registered(gem_name=gem_name, project_path=project_path)
 
-    return get_json_data('gem', gem_path, validation.valid_o3de_gem_json)
+    if pathlib.Path(gem_path).is_file():
+        return get_json_data_file(gem_path, 'gem', validation.valid_o3de_gem_json)
+    else:
+        return get_json_data('gem', gem_path, validation.valid_o3de_gem_json)
 
 
 def get_template_json_data(template_name: str = None, template_path: str or pathlib.Path = None,
@@ -536,7 +551,8 @@ def get_repo_path(repo_uri: str, cache_folder: str = None) -> pathlib.Path:
     if not cache_folder:
         cache_folder = get_o3de_cache_folder()
 
-    repo_sha256 = hashlib.sha256(repo_uri.encode())
+    repo_manifest = f'{repo_uri}/repo.json'
+    repo_sha256 = hashlib.sha256(repo_manifest.encode())
     return cache_folder / str(repo_sha256.hexdigest() + '.json')
 
 def get_registered(engine_name: str = None,
@@ -580,14 +596,14 @@ def get_registered(engine_name: str = None,
             if isinstance(engine, dict):
                 engine_path = pathlib.Path(engine['path']).resolve()
             else:
-                engine_path = pathlib.Path(engine_object).resolve()
+                engine_path = pathlib.Path(engine).resolve()
 
             engine_json = engine_path / 'engine.json'
             with engine_json.open('r') as f:
                 try:
                     engine_json_data = json.load(f)
                 except json.JSONDecodeError as e:
-                    logger.warn(f'{engine_json} failed to load: {str(e)}')
+                    logger.warning(f'{engine_json} failed to load: {str(e)}')
                 else:
                     this_engines_name = engine_json_data['engine_name']
                     if this_engines_name == engine_name:
@@ -602,7 +618,7 @@ def get_registered(engine_name: str = None,
                 try:
                     project_json_data = json.load(f)
                 except json.JSONDecodeError as e:
-                    logger.warn(f'{project_json} failed to load: {str(e)}')
+                    logger.warning(f'{project_json} failed to load: {str(e)}')
                 else:
                     this_projects_name = project_json_data['project_name']
                     if this_projects_name == project_name:
@@ -617,7 +633,7 @@ def get_registered(engine_name: str = None,
                 try:
                     gem_json_data = json.load(f)
                 except json.JSONDecodeError as e:
-                    logger.warn(f'{gem_json} failed to load: {str(e)}')
+                    logger.warning(f'{gem_json} failed to load: {str(e)}')
                 else:
                     this_gems_name = gem_json_data['gem_name']
                     if this_gems_name == gem_name:
@@ -632,7 +648,7 @@ def get_registered(engine_name: str = None,
                 try:
                     template_json_data = json.load(f)
                 except json.JSONDecodeError as e:
-                    logger.warn(f'{template_path} failed to load: {str(e)}')
+                    logger.warning(f'{template_path} failed to load: {str(e)}')
                 else:
                     this_templates_name = template_json_data['template_name']
                     if this_templates_name == template_name:
@@ -647,7 +663,7 @@ def get_registered(engine_name: str = None,
                 try:
                     restricted_json_data = json.load(f)
                 except json.JSONDecodeError as e:
-                    logger.warn(f'{restricted_json} failed to load: {str(e)}')
+                    logger.warning(f'{restricted_json} failed to load: {str(e)}')
                 else:
                     this_restricted_name = restricted_json_data['restricted_name']
                     if this_restricted_name == restricted_name:
@@ -680,7 +696,7 @@ def get_registered(engine_name: str = None,
                     try:
                         repo_json_data = json.load(f)
                     except json.JSONDecodeError as e:
-                        logger.warn(f'{cache_file} failed to load: {str(e)}')
+                        logger.warning(f'{cache_file} failed to load: {str(e)}')
                     else:
                         this_repos_name = repo_json_data['repo_name']
                         if this_repos_name == repo_name:
